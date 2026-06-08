@@ -106,12 +106,19 @@ def validate_reviewed_output(original: dict[str, Any], reviewed: dict[str, Any])
 
 
 def version_of(file_path: str) -> str:
-    match = re.search(r"aspro\.next/(\.last_version|\d+\.\d+\.\d+)/", file_path)
-    return match.group(1) if match else "unknown"
+    parts = str(file_path).replace("\\", "/").split("/")
+    for part in parts:
+        if part == ".last_version" or re.fullmatch(r"\d+\.\d+\.\d+", part):
+            return part
+    return "current"
+
+
+def scope_of(version: str) -> str:
+    return "historical-update" if re.fullmatch(r"\d+\.\d+\.\d+", version) else "current"
 
 
 def relative_path(file_path: str) -> str:
-    return re.sub(r"^.*aspro\.next/(?:\.last_version|\d+\.\d+\.\d+)/", "", file_path)
+    return re.sub(r"^.*(?:\.last_version|\d+\.\d+\.\d+)/", "", str(file_path).replace("\\", "/"))
 
 
 def has_any(text: str, patterns: list[str]) -> bool:
@@ -121,7 +128,7 @@ def has_any(text: str, patterns: list[str]) -> bool:
 def review_vulnerability(vuln: dict[str, Any]) -> dict[str, Any]:
     old_severity = str(vuln["severity"]).lower()
     version = version_of(str(vuln["file"]))
-    scope = "current" if version == ".last_version" else "historical-update"
+    scope = scope_of(version)
     rel = relative_path(str(vuln["file"]))
     description = str(vuln.get("description", ""))
     text = "\n".join(
@@ -137,11 +144,7 @@ def review_vulnerability(vuln: dict[str, Any]) -> dict[str, Any]:
     )
     action = "fix"
     confidence = "medium"
-    relevance = (
-        "present-in-current-last-version"
-        if scope == "current"
-        else "historical-update-package-not-shown-in-current-last-version"
-    )
+    relevance = "present-in-current-scan" if scope == "current" else "historical-update-package"
 
     vuln_type = str(vuln["type"])
     is_hardcoded_secret = vuln_type == "Hardcoded Secret"
@@ -335,11 +338,10 @@ def review_vulnerability(vuln: dict[str, Any]) -> dict[str, Any]:
         new_severity = "medium" if old_severity == "low" else old_severity
         category = "potential-api-token-exposure"
         rationale = (
-            "Kept as a real issue if ACCESS_TOKEN contains an OAuth/API-Key/bearer-style "
-            "Yandex API secret; official Yandex API docs treat OAuth/API keys as "
-            "authorization tokens, not public frontend identifiers. If the field actually "
-            "contains only a public counter/widget/model ID, this finding should be removed "
-            "or downgraded after code/value validation."
+            "Kept as a real issue if the value is an OAuth/API-Key/bearer-style secret "
+            "or if transport/authentication handling can expose such secrets. If the "
+            "field is only a public widget/model identifier, this finding should be "
+            "removed or downgraded after code/value validation."
         )
         action = "validate-token-kind-and-keep-server-side"
     elif vuln_type == "Authentication Bypass":
@@ -410,8 +412,8 @@ def review_vulnerability(vuln: dict[str, Any]) -> dict[str, Any]:
 
     if scope == "historical-update":
         rationale += (
-            " Path is under a versioned update package, not .last_version; this affects "
-            "current publication triage."
+            " Path is under a versioned update package; this affects current "
+            "publication triage."
         )
 
     return {
@@ -451,8 +453,22 @@ def review_journal(doc: dict[str, Any]) -> dict[str, Any]:
     source_vulns = doc["data"]["vulnerabilities"]
     current = [v for v in vulns if v["reviewed"]["versionScope"] == "current"]
     historical = [v for v in vulns if v["reviewed"]["versionScope"] == "historical-update"]
-    source_current = [v for v in source_vulns if version_of(str(v["file"])) == ".last_version"]
-    source_historical = [v for v in source_vulns if version_of(str(v["file"])) != ".last_version"]
+    source_current = [v for v in source_vulns if scope_of(version_of(str(v["file"]))) == "current"]
+    source_historical = [
+        v for v in source_vulns if scope_of(version_of(str(v["file"]))) == "historical-update"
+    ]
+    caveats = [
+        "Type, file, line, description, recommendation and fix are preserved from the source journal.",
+        "Severity is replaced with reviewed triage severity.",
+    ]
+    if any(v["reviewed"]["category"] == "potential-api-token-exposure" for v in vulns):
+        caveats.append(
+            "Token exposure remains conditional: validate whether the value is an OAuth/API-Key/bearer token or only a public widget/model identifier."
+        )
+    if historical:
+        caveats.append(
+            "Historical update package findings are not current-version blockers unless reproduced on the latest installed version."
+        )
 
     out["data"]["reviewSummary"] = {
         "reviewedAt": date.today().isoformat(),
@@ -467,7 +483,7 @@ def review_journal(doc: dict[str, Any]) -> dict[str, Any]:
         },
         "rawSeverityCounts": counts_by(source_vulns, lambda v: v["severity"]),
         "reviewedSeverityCounts": counts_by(vulns, lambda v: v["severity"]),
-        "currentLastVersion": {
+        "currentScope": {
             "total": len(current),
             "rawSeverityCounts": counts_by(source_current, lambda v: v["severity"]),
             "reviewedSeverityCounts": counts_by(current, lambda v: v["severity"]),
@@ -479,12 +495,7 @@ def review_journal(doc: dict[str, Any]) -> dict[str, Any]:
             "reviewedSeverityCounts": counts_by(historical, lambda v: v["severity"]),
             "reviewedCategories": counts_by(historical, lambda v: v["reviewed"]["category"]),
         },
-        "caveats": [
-            "Type, file, line, description, recommendation and fix are preserved from the source journal.",
-            "Severity is replaced with reviewed triage severity.",
-            "ACCESS_TOKEN exposure remains conditional: validate whether the value is an OAuth/API-Key/bearer token or only a public Yandex counter/widget/model identifier.",
-            "Historical update package findings are not current-version blockers unless reproduced on the latest installed version.",
-        ],
+        "caveats": caveats,
     }
     validate_reviewed_output(doc, out)
     return out

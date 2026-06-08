@@ -1,17 +1,17 @@
 ---
-name: bitrix-vulnerability-journal-update
-description: Updates and validates cumulative security-journal.json files for Bitrix module security preflight runs from reviewed scan JSON outputs.
+name: journal-update
+description: Use when updating and validating cumulative security-journal.json files for Bitrix module security runs from reviewed scan JSON outputs.
 ---
 
 # Bitrix Vulnerability Journal Update
 
-Use this skill after `bitrix-module-security-scan` and `bitrix-vulnerability-journal-review`.
+Use this skill after `scan` and `journal-review`.
 
 It maintains the cumulative `security-journal.json` submitted by a Bitrix module developer. The key lifecycle logic is deterministic and lives in `scripts/update_journal.py`; do not hand-edit journal state unless the script cannot represent the case.
 
 ## Inputs
 
-- reviewed scan JSON: output of `bitrix-vulnerability-journal-review`
+- reviewed scan JSON: output of `journal-review`
 - optional previous `security-journal.json`
 - optional module path, used to classify vanished findings as `removed` when the original file no longer exists
 - optional final archive SHA-256
@@ -51,6 +51,7 @@ python3 <skill-dir>/scripts/update_journal.py --validate-only security-journal.j
   - `fixed` otherwise
 - A resolved finding that appears again is reopened with status `open`.
 - Partner dispositions are preserved if present on a scan finding as `partner_disposition.status` with value `false_positive` or `accepted_risk`.
+- If a current scan finding matches a previous finding that already has `false_positive` or `accepted_risk`, and the new scan does not explicitly provide a new `partner_disposition`, the previous developer disposition is kept. This prevents partners from re-marking the same finding after every rescan.
 - The script never deletes historical findings or runs.
 
 ## Output

@@ -2,3 +2,10 @@ module/
 .DS_Store
 __pycache__/
 *.pyc
+
+# Runtime audit outputs
+reports/*.json
+security-journal.json
+
+# Local browser verification artifacts
+.playwright-mcp/

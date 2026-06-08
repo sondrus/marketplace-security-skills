@@ -200,6 +200,28 @@ def disposition_status(vuln: dict[str, Any]) -> str:
     return "open"
 
 
+def disposition_node(vuln: dict[str, Any]) -> dict[str, Any] | None:
+    disposition = vuln.get("partner_disposition")
+    if not isinstance(disposition, dict):
+        return None
+    status = str(disposition.get("status", "")).lower()
+    if status not in DISPOSITION_STATUSES:
+        return None
+    return disposition
+
+
+def preserved_disposition(finding: dict[str, Any]) -> dict[str, Any] | None:
+    latest = finding.get("latest_vulnerability")
+    if isinstance(latest, dict):
+        disposition = disposition_node(latest)
+        if disposition:
+            return disposition
+    status = str(finding.get("status", "")).lower()
+    if status in DISPOSITION_STATUSES:
+        return {"status": status}
+    return None
+
+
 def file_exists(module_path: str | None, file_path: str | None) -> bool | None:
     if not module_path or not file_path:
         return None
@@ -245,6 +267,11 @@ def update_current_state(journal: dict[str, Any], archive_sha256: str | None, ru
     }
 
 
+def severity_counts(vulns: list[dict[str, Any]]) -> dict[str, int]:
+    counts = Counter(str(vuln.get("severity", "")).lower() for vuln in vulns)
+    return {severity: counts[severity] for severity in ("critical", "high", "medium", "low", "info") if counts[severity]}
+
+
 def update_journal(
     scan: dict[str, Any],
     previous: dict[str, Any] | None,
@@ -268,17 +295,23 @@ def update_journal(
     still_open_count = 0
 
     for fingerprint, vuln in current_by_fingerprint.items():
-        status = disposition_status(vuln)
         location = scan_location(vuln)
         finding = existing_by_fingerprint.get(fingerprint)
         if finding:
+            vuln = deepcopy(vuln)
             was_resolved = finding["status"] in RESOLVED_STATUSES
+            disposition = disposition_node(vuln)
+            if disposition is None and finding["status"] in DISPOSITION_STATUSES:
+                disposition = preserved_disposition(finding)
+                if disposition:
+                    vuln["partner_disposition"] = deepcopy(disposition)
+            status = disposition_status(vuln)
             finding["status"] = status
             finding["severity"] = str(vuln.get("severity", "")).lower()
             finding["type"] = str(vuln.get("type", ""))
             finding["last_seen_run_id"] = run_id
             finding["current_location"] = location
-            finding["latest_vulnerability"] = deepcopy(vuln)
+            finding["latest_vulnerability"] = vuln
             append_event(
                 finding,
                 run_id,
@@ -291,6 +324,7 @@ def update_journal(
                 still_open_count += 1
             continue
 
+        status = disposition_status(vuln)
         finding_id = next_finding_id(journal["findings"])
         new_finding = {
             "journal_finding_id": finding_id,
@@ -344,6 +378,7 @@ def update_journal(
         "input_summary": scan.get("data", {}).get("summary"),
         "summary": {
             "current_scan_findings": len(current_vulns),
+            "severity_counts": severity_counts(current_vulns),
             "new_findings": new_count,
             "still_open_findings": still_open_count,
             "reopened_findings": reopened_count,

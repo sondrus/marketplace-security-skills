@@ -1,5 +1,5 @@
 ---
-name: bitrix-vulnerability-journal-review
+name: journal-review
 description: Use when reviewing JSON vulnerability journals for 1C-Bitrix Site Manager or boxed Marketplace modules, especially when scanner severity may ignore Bitrix admin/content-editor trust boundaries.
 ---
 
