@@ -11,8 +11,6 @@ skills/
     journal-review/       # пересмотр severity с учетом Bitrix/BUS-контекста
     journal-update/       # ведение накопительного security-journal.json
     using-marketplace-sec/ # оркестратор полного Marketplace pre-submission flow
-  diagnostics/
-    codex-skill-smoke-test/ # проверка, что Codex видит локальные skills
 
 reports/
   *.json                  # runtime-артефакты проверок, не коммитятся
@@ -132,14 +130,6 @@ python3 skills/bitrix-security/journal-update/scripts/update_journal.py \
 7. Сообщить release readiness из `current_state` вместе с URL интерфейса.
 
 Этот skill не содержит собственных audit-heuristics: улучшения аудита живут в `scan`, политика severity - в `journal-review`, lifecycle-состояние - в `journal-update`.
-
-### `codex-skill-smoke-test`
-
-Диагностический skill для проверки, что Codex видит и загружает локальные skills. При срабатывании должен вернуть:
-
-```text
-SMOKE_TEST_SKILL_LOADED
-```
 
 ## End-to-End Flow
 

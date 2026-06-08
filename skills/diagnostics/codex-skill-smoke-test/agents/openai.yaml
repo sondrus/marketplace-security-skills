@@ -1,7 +1,0 @@
-interface:
-  display_name: "Codex Skill Smoke Test"
-  short_description: "Checks whether local skill loading works."
-  default_prompt: "Use $codex-skill-smoke-test to verify that Codex loaded the diagnostic skill."
-
-policy:
-  allow_implicit_invocation: true
