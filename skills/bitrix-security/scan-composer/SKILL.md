@@ -1,13 +1,13 @@
 ---
 name: scan-composer
-description: Marketplace pre-submission security-flow для ОДНОГО Bitrix-модуля — сырой аудит и BUS-aware пересмотр severity. Точка входа сканера (engine claude-cli). Вызывается с одним аргументом — путём к распакованному модулю. Headless (без UI).
+description: Marketplace pre-submission security-flow для ОДНОГО Bitrix-модуля — сырой аудит и BUS-aware пересмотр severity. Headless точка входа автоматического сканера (без UI). Вызывается с одним аргументом — путём к распакованному модулю.
 ---
 
 # Bitrix Module Security — orchestrated entry
 
-Это **точка входа** скана для движка `claude-cli`. Ты запускаешь security-flow
-проверки одного Bitrix-модуля, headless (контейнер изолирован, внешней сети нет —
-только relay модели; никакого веб-UI).
+Это **headless точка входа** автоматического скана (подходит для любого agent-CLI).
+Ты запускаешь security-flow проверки одного Bitrix-модуля, headless (контейнер
+изолирован, внешней сети нет — только relay модели; никакого веб-UI).
 
 Сам этот скилл эвристик аудита не содержит. Аудит — в скилле `scan`, политика
 severity — в `journal-review`. Те же шаги в человекочитаемом виде описаны в

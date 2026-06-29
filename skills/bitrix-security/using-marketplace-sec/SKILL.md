@@ -25,7 +25,7 @@ This skill is an orchestrator. It does not contain security-audit heuristics. Ke
 4. Run `journal-update`:
 
 ```bash
-python3 /Users/sv/.codex/skills/journal-update/scripts/update_journal.py \
+python3 <journal-update-skill>/scripts/update_journal.py \
   reports/<module_code>.reviewed.json \
   --previous reports/security-journal.json \
   --module-path <module_path> \
@@ -38,7 +38,7 @@ For the first run, omit `--previous`.
 5. Validate the journal:
 
 ```bash
-python3 /Users/sv/.codex/skills/journal-update/scripts/update_journal.py \
+python3 <journal-update-skill>/scripts/update_journal.py \
   --validate-only reports/security-journal.json
 ```
 
