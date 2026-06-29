@@ -47,25 +47,93 @@ def load_json(path: Path) -> dict[str, Any]:
         raise SystemExit(f"Invalid JSON: {path}: {exc}") from exc
 
 
-def validate_input(doc: dict[str, Any]) -> None:
+def _structural_error(doc: dict[str, Any]) -> str | None:
+    """Fatal skeleton problems the agent CANNOT fix by a targeted re-check (the
+    whole journal is broken, not one finding). Returns a message, or None when the
+    skeleton is sound."""
     if not isinstance(doc, dict):
-        raise SystemExit("Journal root must be a JSON object")
+        return "Journal root must be a JSON object"
     if "success" not in doc:
-        raise SystemExit("Journal missing top-level key: success")
-    data = doc.get("data")
-    if not isinstance(data, dict):
-        raise SystemExit("Journal key data must be an object")
-    vulns = data.get("vulnerabilities")
-    if not isinstance(vulns, list):
-        raise SystemExit("Journal key data.vulnerabilities must be an array")
+        return "Journal missing top-level key: success"
+    if not isinstance(doc.get("data"), dict):
+        return "Journal key data must be an object"
+    if not isinstance(doc["data"].get("vulnerabilities"), list):
+        return "Journal key data.vulnerabilities must be an array"
+    return None
+
+
+def _normalize_and_collect_problems(vulns: list[Any]) -> list[dict[str, Any]]:
+    """Walk every finding ONCE. For valid data, normalize only its FORMAT in place
+    (numeric `line` -> string; severity -> canonical lowercase) — same datum, never
+    fabricated. For genuine content gaps (a missing required key, or a severity whose
+    value is outside the allowed set) collect a structured problem record. Returns
+    ALL problems across ALL findings (not just the first) so the orchestrator can fix
+    them in a SINGLE targeted pass instead of one re-run per missing field."""
+    problems: list[dict[str, Any]] = []
     for idx, vuln in enumerate(vulns):
         if not isinstance(vuln, dict):
-            raise SystemExit(f"Vulnerability #{idx} must be an object")
+            problems.append({
+                "index": idx, "file": None, "line": None, "type": None,
+                "missingKeys": sorted(REQUIRED_VULN_KEYS), "invalidSeverity": None,
+            })
+            continue
+        # Format normalization (NOT fabrication) of present fields. The skill permits
+        # `line` as a string like "26-29,116-167"; a model emitting the number 26 is
+        # the SAME datum in a different lexical form -> canonicalize to "26".
+        if "line" in vuln and isinstance(vuln["line"], (int, float)) and not isinstance(vuln["line"], bool):
+            vuln["line"] = str(vuln["line"])
+        # severity membership is case-insensitive; persist the canonical lowercase
+        # form (same real value, canonical case). An out-of-set value is a real
+        # content problem (recorded), never silently coerced to some default.
+        invalid_severity = None
+        if "severity" in vuln:
+            severity_canonical = str(vuln["severity"]).lower()
+            if severity_canonical in ALLOWED_SEVERITIES:
+                vuln["severity"] = severity_canonical
+            else:
+                invalid_severity = vuln["severity"]
         missing = sorted(REQUIRED_VULN_KEYS - set(vuln))
-        if missing:
-            raise SystemExit(f"Vulnerability #{idx} missing keys: {', '.join(missing)}")
-        if str(vuln["severity"]).lower() not in ALLOWED_SEVERITIES:
-            raise SystemExit(f"Vulnerability #{idx} has invalid severity: {vuln['severity']!r}")
+        if missing or invalid_severity is not None:
+            problems.append({
+                "index": idx,
+                "file": vuln.get("file"),
+                "line": vuln.get("line"),
+                "type": vuln.get("type"),
+                "missingKeys": missing,
+                "invalidSeverity": invalid_severity,
+            })
+    return problems
+
+
+def _fail_with_content_gaps(problems: list[dict[str, Any]]) -> None:
+    """Report genuine content gaps both human-readably (for logs) and machine-readably
+    (a single `REVIEW_VALIDATION_ERRORS: <json>` line) to stderr, then exit non-zero.
+    The orchestrator parses the JSON to do a TARGETED re-check — open each finding's
+    file, derive the REAL missing field from the code, re-run. The script itself NEVER
+    invents the missing content; failing honestly beats a fictional report."""
+    human = ["review_journal: genuine content gaps (NOT auto-filled — fix from code and re-run):"]
+    for p in problems:
+        bits: list[str] = []
+        if p["missingKeys"]:
+            bits.append("missing " + ", ".join(p["missingKeys"]))
+        if p["invalidSeverity"] is not None:
+            bits.append(f"invalid severity {p['invalidSeverity']!r}")
+        loc = p["file"] or "?"
+        if p["line"]:
+            loc = f"{loc}:{p['line']}"
+        human.append(f"  - #{p['index']} [{p['type'] or '?'}] {loc}: {'; '.join(bits)}")
+    sys.stderr.write("\n".join(human) + "\n")
+    sys.stderr.write("REVIEW_VALIDATION_ERRORS: " + json.dumps(problems, ensure_ascii=False) + "\n")
+    raise SystemExit(1)
+
+
+def validate_input(doc: dict[str, Any]) -> None:
+    structural = _structural_error(doc)
+    if structural:
+        raise SystemExit(structural)
+    problems = _normalize_and_collect_problems(doc["data"]["vulnerabilities"])
+    if problems:
+        _fail_with_content_gaps(problems)
 
 
 def validate_reviewed_output(original: dict[str, Any], reviewed: dict[str, Any]) -> None:
@@ -84,7 +152,7 @@ def validate_reviewed_output(original: dict[str, Any], reviewed: dict[str, Any])
         missing = sorted(REQUIRED_REVIEWED_KEYS - set(reviewed_node))
         if missing:
             raise SystemExit(f"Reviewed node #{idx} missing keys: {', '.join(missing)}")
-        if reviewed_node["oldSeverity"] != orig["severity"]:
+        if str(reviewed_node["oldSeverity"]).lower() != str(orig["severity"]).lower():
             raise SystemExit(f"Reviewed node #{idx} oldSeverity does not match source severity")
         if reviewed_node["newSeverity"] != rev["severity"]:
             raise SystemExit(f"Reviewed node #{idx} newSeverity does not match output severity")
