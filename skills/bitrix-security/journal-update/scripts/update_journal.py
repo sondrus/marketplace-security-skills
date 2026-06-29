@@ -352,7 +352,7 @@ def update_journal(
     for finding in journal["findings"]:
         if finding["fingerprint"] in current_by_fingerprint:
             continue
-        if finding["status"] not in OPEN_STATUSES:
+        if finding["status"] in RESOLVED_STATUSES:
             continue
         last_location = finding.get("current_location") or finding.get("original_location") or {}
         last_file = normalize_file(last_location.get("file"))
