@@ -16,16 +16,15 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-ALLOWED_SEVERITIES = {"critical", "high", "medium", "low", "info", "informational"}
+# The system uses exactly three severities (see scan/references/severity-rubric.md);
+# critical/info are not produced or accepted.
+ALLOWED_SEVERITIES = {"high", "medium", "low"}
 # Severity ordering used to derive data.riskLevel deterministically from the
 # per-finding reviewed severities, so the headline risk can never drift from them.
 SEVERITY_RANK = {
-    "critical": 5,
-    "high": 4,
-    "medium": 3,
-    "low": 2,
-    "info": 1,
-    "informational": 1,
+    "high": 3,
+    "medium": 2,
+    "low": 1,
 }
 REQUIRED_VULN_KEYS = {
     "file",

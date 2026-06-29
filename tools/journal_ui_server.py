@@ -16,7 +16,7 @@ from typing import Any
 
 ALLOWED_DISPOSITIONS = {"open", "false_positive", "accepted_risk"}
 DISPOSITION_STATUSES = {"false_positive", "accepted_risk"}
-BLOCKING_SEVERITIES = {"critical", "high"}
+BLOCKING_SEVERITIES = {"high"}
 
 
 def now_iso() -> str:
@@ -295,6 +295,7 @@ HTML = """<!doctype html>
       </select>
       <select id="severityFilter">
         <option value="">Все severity</option>
+        <option value="high">High</option>
         <option value="medium">Medium</option>
         <option value="low">Low</option>
       </select>
@@ -395,13 +396,11 @@ HTML = """<!doctype html>
       }
       const labels = rows.map(row => row.label);
       const colors = {
-        critical: '#ff7b72',
         high: '#ff7b72',
         medium: '#f2cc60',
         low: '#a5b4fc',
-        info: '#79c0ff',
       };
-      const datasets = ['critical', 'high', 'medium', 'low', 'info']
+      const datasets = ['high', 'medium', 'low']
         .filter(severity => rows.some(row => Number(row.counts[severity] || 0) > 0))
         .map(severity => ({
           label: severity,

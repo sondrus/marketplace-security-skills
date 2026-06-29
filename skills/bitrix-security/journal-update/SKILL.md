@@ -38,7 +38,7 @@ python3 <skill-dir>/scripts/update_journal.py --validate-only security-journal.j
 
 3. Read `current_state` and report only the release-readiness summary:
    - `ready_for_submission` if blocking/open findings are zero
-   - `blocked` if high/critical open findings remain
+   - `blocked` if open high findings remain
    - `needs_review` if accepted-risk or false-positive dispositions remain
 
 ## Deterministic Rules

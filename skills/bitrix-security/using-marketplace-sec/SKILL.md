@@ -56,7 +56,7 @@ If port `8765` is already in use, pick the next free port. Open the resulting UR
 
 7. Report the final status from `current_state`, the UI URL, and the displayed finding counts:
    - `ready_for_submission`: no open findings and no unresolved dispositions
-   - `blocked`: open high/critical findings remain
+   - `blocked`: open high findings remain
    - `needs_review`: open lower-severity findings or partner dispositions remain
 
 ## Output Artifacts

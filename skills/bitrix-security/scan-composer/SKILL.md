@@ -55,7 +55,7 @@ severity — в `journal-review`. Те же шаги в человекочита
       (`Read`) её `file` (при необходимости по `line`) и впиши в
       `/tmp/raw-scan.json` **реальное** недостающее значение, выведенное из кода —
       настоящие `description`/`recommendation`/`fix`, либо корректную `severity` из
-      набора `{critical, high, medium, low}`. Чини **все** находки из списка за один
+      набора `{high, medium, low}`. Чини **все** находки из списка за один
       проход. **Никаких заглушек/плейсхолдеров.**
    3. Перезапусти ту же команду `review_journal.py`. Повторяй цикл, пока код выхода
       не станет 0.
@@ -69,7 +69,7 @@ severity — в `journal-review`. Те же шаги в человекочита
    Прочитай `RESULT_PATH` и убедись по каждому пункту:
    - `data.summary` — это **строка** (не объект, не массив).
    - `data.scannedFiles` — это **число**.
-   - `data.riskLevel` ∈ `{critical, high, medium, low, none}`.
+   - `data.riskLevel` ∈ `{high, medium, low, none}`.
    - `data.auditedFiles` — это **массив строк**.
    - у **каждого** `data.vulnerabilities[i]` присутствуют все 7 ключей
      (`file, line, type, severity, description, recommendation, fix`), причём
@@ -84,7 +84,7 @@ severity — в `journal-review`. Те же шаги в человекочита
    пересобран из исправленных данных. Если сойтись не удалось — останови flow с
    ошибкой, не сдавай фиктивный отчёт.
 
-4. **Резюме одной строкой:** reviewed-счётчики severity (critical/high/medium/low)
+4. **Резюме одной строкой:** reviewed-счётчики severity (high/medium/low)
    из data.reviewSummary.
 
 Никаких UI/веб-серверов не запускай. Накопительный журнал (`journal-update`) в

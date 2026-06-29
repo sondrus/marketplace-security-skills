@@ -19,7 +19,7 @@ OPEN_STATUSES = {"open"}
 DISPOSITION_STATUSES = {"false_positive", "accepted_risk"}
 RESOLVED_STATUSES = {"fixed", "removed"}
 ALLOWED_STATUSES = OPEN_STATUSES | DISPOSITION_STATUSES | RESOLVED_STATUSES
-BLOCKING_SEVERITIES = {"critical", "high"}
+BLOCKING_SEVERITIES = {"high"}
 REQUIRED_SCAN_VULN_KEYS = {
     "file",
     "line",
@@ -272,7 +272,7 @@ def update_current_state(journal: dict[str, Any], archive_sha256: str | None, ru
 
 def severity_counts(vulns: list[dict[str, Any]]) -> dict[str, int]:
     counts = Counter(str(vuln.get("severity", "")).lower() for vuln in vulns)
-    return {severity: counts[severity] for severity in ("critical", "high", "medium", "low", "info") if counts[severity]}
+    return {severity: counts[severity] for severity in ("high", "medium", "low") if counts[severity]}
 
 
 def update_journal(

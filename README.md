@@ -117,7 +117,7 @@ python3 skills/bitrix-security/journal-update/scripts/update_journal.py \
 Финальный статус из `current_state.status`:
 
 - `ready_for_submission` - нет открытых findings и unresolved dispositions;
-- `blocked` - остались открытые `critical` или `high`;
+- `blocked` - остались открытые `high`;
 - `needs_review` - остались открытые low/medium или developer dispositions.
 
 ### `using-marketplace-sec`

@@ -98,7 +98,7 @@ VALID security journal
 | `last_run_id` | string/null | `run_id` последнего элемента из `runs`. |
 | `archive_sha256` | string/null | SHA-256 финального архива модуля, если известен. |
 | `open_findings` | number | Количество findings со статусом `open`. |
-| `blocking_findings_open` | number | Количество `open` findings с severity `critical` или `high`. |
+| `blocking_findings_open` | number | Количество `open` findings с severity `high`. |
 | `false_positive_findings` | number | Количество findings со статусом `false_positive`. |
 | `accepted_risk_findings` | number | Количество findings со статусом `accepted_risk`. |
 | `fixed_findings` | number | Количество findings со статусом `fixed`. |
@@ -109,7 +109,7 @@ VALID security journal
 
 Используйте ровно такую логику:
 
-1. Если есть хотя бы один открытый `critical` или `high` finding:
+1. Если есть хотя бы один открытый `high` finding:
    `status = "blocked"`.
 2. Иначе если есть хотя бы один `open`, `false_positive` или `accepted_risk`
    finding: `status = "needs_review"`.
@@ -268,17 +268,15 @@ VALID security journal
 
 ### Допустимые `severity`
 
-Рекомендуемые значения:
+Допустимые значения (ровно три — см. `severity-rubric.md`):
 
-- `critical`
 - `high`
 - `medium`
 - `low`
-- `info`
 
 Для финального журнала используйте reviewed severity, а не raw severity
 сканера. Severity влияет на `blocking_findings_open`: только открытые
-`critical` и `high` блокируют submission.
+`high` блокируют submission.
 
 ### Допустимые `status`
 
