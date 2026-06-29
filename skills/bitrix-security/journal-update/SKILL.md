@@ -43,7 +43,7 @@ python3 <skill-dir>/scripts/update_journal.py --validate-only security-journal.j
 
 ## Deterministic Rules
 
-- Findings are matched by a stable fingerprint derived from type, reviewed severity, normalized file, line, and normalized description.
+- Findings are matched by a stable fingerprint derived from type, normalized file, line, and normalized description. Severity is intentionally excluded so a severity re-triage maps to the same finding instead of forking the journal.
 - A current scan finding matching a previous finding keeps the same `journal_finding_id`.
 - A current scan finding with no match creates a new journal finding.
 - A previously open finding absent from the current scan is resolved:

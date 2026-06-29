@@ -65,9 +65,12 @@ def normalize_file(value: Any) -> str:
 
 
 def vulnerability_fingerprint(vuln: dict[str, Any]) -> str:
+    # Severity is deliberately excluded: a re-triage that changes only the
+    # severity must map to the SAME finding so the cumulative journal (status
+    # history, partner_disposition) survives instead of forking into a new
+    # open finding while the old one is marked fixed.
     parts = [
         normalize_text(vuln.get("type")),
-        normalize_text(vuln.get("severity")),
         normalize_file(vuln.get("file")),
         normalize_text(vuln.get("line")),
         normalize_text(vuln.get("description")),

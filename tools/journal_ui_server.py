@@ -41,9 +41,10 @@ def normalize_file(value: Any) -> str:
 
 
 def vulnerability_fingerprint(vuln: dict[str, Any]) -> str:
+    # Severity is deliberately excluded so it matches the updater's fingerprint:
+    # a re-triage that changes only the severity stays the same finding.
     parts = [
         normalize_text(vuln.get("type")),
-        normalize_text(vuln.get("severity")),
         normalize_file(vuln.get("file")),
         normalize_text(vuln.get("line")),
         normalize_text(vuln.get("description")),
