@@ -17,6 +17,16 @@ from pathlib import Path
 from typing import Any
 
 ALLOWED_SEVERITIES = {"critical", "high", "medium", "low", "info", "informational"}
+# Severity ordering used to derive data.riskLevel deterministically from the
+# per-finding reviewed severities, so the headline risk can never drift from them.
+SEVERITY_RANK = {
+    "critical": 5,
+    "high": 4,
+    "medium": 3,
+    "low": 2,
+    "info": 1,
+    "informational": 1,
+}
 REQUIRED_VULN_KEYS = {
     "file",
     "line",
@@ -171,6 +181,16 @@ def validate_reviewed_output(original: dict[str, Any], reviewed: dict[str, Any])
     summary = reviewed.get("data", {}).get("reviewSummary")
     if not isinstance(summary, dict):
         raise SystemExit("Reviewed journal missing data.reviewSummary object")
+
+    risk_level = reviewed.get("data", {}).get("riskLevel")
+    if risk_level is None:
+        raise SystemExit("Reviewed journal missing data.riskLevel")
+    expected_risk = risk_level_of(rev_vulns)
+    if str(risk_level).lower() != expected_risk:
+        raise SystemExit(
+            f"Reviewed data.riskLevel {risk_level!r} does not equal the max "
+            f"reviewed severity {expected_risk!r}"
+        )
 
 
 def version_of(file_path: str) -> str:
@@ -506,6 +526,18 @@ def counts_by(items: list[Any], key_fn: Any) -> dict[str, int]:
     return counts
 
 
+def risk_level_of(vulns: list[Any]) -> str:
+    """Highest reviewed severity across the findings, or 'none' when there are none.
+    Deterministic so data.riskLevel always matches the per-finding severities."""
+    best_sev, best_rank = "none", 0
+    for vuln in vulns:
+        sev = str(vuln.get("severity", "")).lower()
+        rank = SEVERITY_RANK.get(sev, 0)
+        if rank > best_rank:
+            best_sev, best_rank = sev, rank
+    return best_sev
+
+
 def review_journal(doc: dict[str, Any]) -> dict[str, Any]:
     validate_input(doc)
     out = deepcopy(doc)
@@ -538,6 +570,9 @@ def review_journal(doc: dict[str, Any]) -> dict[str, Any]:
             "Historical update package findings are not current-version blockers unless reproduced on the latest installed version."
         )
 
+    # Recompute the headline risk from the REVIEWED severities; never trust the
+    # raw scan's riskLevel, which goes stale the moment a finding is re-scored.
+    out["data"]["riskLevel"] = risk_level_of(vulns)
     out["data"]["reviewSummary"] = {
         "reviewedAt": date.today().isoformat(),
         "method": (
